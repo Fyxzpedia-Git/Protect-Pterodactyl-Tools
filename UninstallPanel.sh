@@ -1,79 +1,68 @@
 #!/bin/bash
 
-echo "================================================="
-echo "   PREPARE CLEAN - PTERODACTYL REINSTALL MODE"
-echo "================================================="
+echo "========================================"
+echo "  PTERODACTYL FULL CLEANER SCRIPT"
+echo "========================================"
 echo ""
-echo "This will remove:"
-echo "- Pterodactyl Panel"
-echo "- Wings"
-echo "- Docker"
-echo "- MySQL / MariaDB"
-echo "- Nginx"
-echo "- Redis"
-echo "- SSL"
-echo "- Game servers"
-echo "- Old backups"
-echo ""
-read -p "Type YES to continue: " confirm
 
-if [ "$confirm" != "YES" ]; then
-    echo "Aborted."
+read -p "Yakin mau hapus SEMUA panel & wings? (y/n): " confirm
+if [[ $confirm != "y" ]]; then
+    echo "Dibatalkan."
     exit 1
 fi
 
 echo ""
-echo "[1/6] Stopping services..."
-systemctl stop wings nginx mysql mariadb redis-server docker containerd 2>/dev/null
-systemctl disable wings nginx mysql mariadb redis-server docker containerd 2>/dev/null
+echo "Stopping services..."
+systemctl stop nginx 2>/dev/null
+systemctl stop php8.3-fpm 2>/dev/null
+systemctl stop php8.2-fpm 2>/dev/null
+systemctl stop php8.1-fpm 2>/dev/null
+systemctl stop wings 2>/dev/null
+systemctl stop mariadb 2>/dev/null
 
-echo "[2/6] Removing packages..."
-apt purge -y nginx* mysql-server* mariadb-server* redis-server* docker* containerd* runc certbot php* 2>/dev/null
-apt autoremove -y
-apt clean
-
-echo "[3/6] Removing panel & wings directories..."
+echo ""
+echo "Removing Pterodactyl files..."
 rm -rf /var/www/pterodactyl
 rm -rf /etc/pterodactyl
 rm -rf /var/lib/pterodactyl
-rm -rf /srv/daemon-data
-rm -rf /usr/local/bin/wings
-rm -rf /etc/systemd/system/wings.service
 
-echo "[4/6] Removing Docker data..."
-rm -rf /var/lib/docker
-rm -rf /var/lib/containerd
-rm -rf /etc/docker
+echo ""
+echo "Removing Nginx configs..."
+rm -f /etc/nginx/sites-enabled/pterodactyl.conf
+rm -f /etc/nginx/sites-available/pterodactyl.conf
 
-echo "[5/6] Removing database & nginx..."
-rm -rf /etc/mysql
-rm -rf /var/lib/mysql
-rm -rf /etc/nginx
+echo ""
+echo "Cleaning SSL leftovers..."
 rm -rf /etc/letsencrypt
-rm -rf /var/log/nginx
-rm -rf /var/log/mysql
+rm -f /etc/ssl/*.pem
+rm -f /etc/ssl/*.key
 
-echo "[6/6] Removing old backups & archives..."
-rm -rf /var/backups/*
-find /home -type f \( -name "*.zip" -o -name "*.tar" -o -name "*.tar.gz" -o -name "*.sql" \) -delete 2>/dev/null
-find /root -type f \( -name "*.zip" -o -name "*.tar" -o -name "*.tar.gz" -o -name "*.sql" \) -delete 2>/dev/null
-
+echo ""
+echo "Removing Wings service..."
+rm -f /etc/systemd/system/wings.service
 systemctl daemon-reload
-systemctl reset-failed
 
 echo ""
-echo "==============================================="
-echo " SYSTEM CLEAN & READY FOR REINSTALL"
-echo "==============================================="
-df -h
+echo "Cleaning database..."
+mysql -u root <<EOF
+DROP DATABASE IF EXISTS panel;
+DROP USER IF EXISTS 'pterodactyl'@'127.0.0.1';
+DROP USER IF EXISTS 'pterodactyl'@'localhost';
+FLUSH PRIVILEGES;
+EOF
 
 echo ""
-echo "Verification:"
-which docker
-which mysql
-which nginx
-which wings
+echo "Autoremove unused packages..."
+apt autoremove -y
+apt autoclean -y
 
 echo ""
-echo "Now you can safely run:"
-echo "bash <(curl -s https://pterodactyl-installer.se)"
+echo "Restarting nginx..."
+systemctl restart nginx 2>/dev/null
+
+echo ""
+echo "========================================"
+echo "  CLEANING COMPLETE ✅"
+echo "========================================"
+echo ""
+echo "Server siap untuk install ulang panel."
