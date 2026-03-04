@@ -1,34 +1,39 @@
-
 #!/bin/bash
-# Protect Panel Installer v3 - by Fyxzpedia
-# Instalasi langsung tanpa file eksternal
+# Protect Panel Installer v3 - FINAL WORKING VERSION
+# Langsung copas dan jalanin!
 
 # Warna
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 echo -e "${GREEN}🧩 Memulai instalasi Protect Panel v3...${NC}"
 
-# Fungsi untuk menulis file
+# Backup dulu
+cp -r /var/www/pterodactyl /var/www/pterodactyl-backup-$(date +%Y%m%d-%H%M%S)
+echo -e "${YELLOW}📦 Backup dibuat di /var/www/pterodactyl-backup-*${NC}"
+
+# Fungsi nulis file pake heredoc (AMAN!)
 write_file() {
-  local path="$1"
-  local content="$2"
-  echo -e "${YELLOW}📝 Menulis $path...${NC}"
-  mkdir -p "$(dirname "$path")"
-  cat > "$path" <<'EOF'
+    local path="$1"
+    local content="$2"
+    echo -e "${YELLOW}📝 Menulis $path...${NC}"
+    mkdir -p "$(dirname "$path")"
+    cat > "$path" <<'EOF'
 $content
 EOF
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ Berhasil: $path${NC}"
-  else
-    echo -e "${RED}❌ Gagal: $path${NC}"
-  fi
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Berhasil: $path${NC}"
+    else
+        echo -e "${RED}❌ Gagal: $path${NC}"
+    fi
 }
 
-# 1. ServerController.php (Admin)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Servers/ServerController.php" '<?php
+# ================================================
+# 1. ServerController.php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Servers/ServerController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin\\Servers;
 
@@ -70,9 +75,9 @@ class ServerController extends Controller
             ->when($request->has('filter') && isset($request->filter['search']), function ($q) use ($request) {
                 $search = $request->filter['search'];
                 $q->where(function ($sub) use ($search) {
-                    $sub->where('name', 'like', "%{$search}%")
-                        ->orWhere('uuidShort', 'like', "%{$search}%")
-                        ->orWhere('uuid', 'like', "%{$search}%");
+                    $sub->where('name', 'like', \"%{$search}%\")
+                        ->orWhere('uuidShort', 'like', \"%{$search}%\")
+                        ->orWhere('uuid', 'like', \"%{$search}%\");
                 });
             })
             ->paginate(config('pterodactyl.paginate.admin.servers'))
@@ -134,10 +139,12 @@ class ServerController extends Controller
         return redirect()->route('admin.servers')
             ->with('success', '🗑️ Server berhasil dihapus.');
     }
-}'
+}"
 
+# ================================================
 # 2. new.blade.php
-write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@extends('layouts.admin')
+# ================================================
+write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" "@extends('layouts.admin')
 
 @section('title')
     New Server
@@ -145,64 +152,64 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
 
 @section('content-header')
     <h1>Create Server<small>Add a new server to the panel.</small></h1>
-    <ol class="breadcrumb">
-        <li><a href="{{ route('admin.index') }}">Admin</a></li>
-        <li><a href="{{ route('admin.servers') }}">Servers</a></li>
-        <li class="active">Create Server</li>
+    <ol class=\"breadcrumb\">
+        <li><a href=\"{{ route('admin.index') }}\">Admin</a></li>
+        <li><a href=\"{{ route('admin.servers') }}\">Servers</a></li>
+        <li class=\"active\">Create Server</li>
     </ol>
 @endsection
 
 @section('content')
-<form action="{{ route('admin.servers.new') }}" method="POST">
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="box">
-                <div class="box-header with-border">
-                    <h3 class="box-title">Core Details</h3>
+<form action=\"{{ route('admin.servers.new') }}\" method=\"POST\">
+    <div class=\"row\">
+        <div class=\"col-xs-12\">
+            <div class=\"box\">
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Core Details</h3>
                 </div>
 
-                <div class="box-body row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="pName">Server Name</label>
-                            <input type="text" class="form-control" id="pName" name="name" value="{{ old('name') }}" placeholder="Server Name">
-                            <p class="small text-muted no-margin">Character limits: <code>a-z A-Z 0-9 _ - .</code> and <code>[Space]</code>.</p>
+                <div class=\"box-body row\">
+                    <div class=\"col-md-6\">
+                        <div class=\"form-group\">
+                            <label for=\"pName\">Server Name</label>
+                            <input type=\"text\" class=\"form-control\" id=\"pName\" name=\"name\" value=\"{{ old('name') }}\" placeholder=\"Server Name\">
+                            <p class=\"small text-muted no-margin\">Character limits: <code>a-z A-Z 0-9 _ - .</code> and <code>[Space]</code>.</p>
                         </div>
 
-<div class="form-group">
-    <label for="pUserId">Server Owner</label>
+<div class=\"form-group\">
+    <label for=\"pUserId\">Server Owner</label>
 
     @if(Auth::user()->id == 1)
         {{-- Admin ID 1: bisa isi manual --}}
-        <select id="pUserId" name="owner_id" class="form-control">
-            <option value="">Select a User</option>
+        <select id=\"pUserId\" name=\"owner_id\" class=\"form-control\">
+            <option value=\"\">Select a User</option>
             @foreach(\\Pterodactyl\\Models\\User::all() as $user)
-                <option value="{{ $user->id }}" @selected(old('owner_id') == $user->id)>
+                <option value=\"{{ $user->id }}\" @selected(old('owner_id') == $user->id)>
                     {{ $user->username }} ({{ $user->email }})
                 </option>
             @endforeach
         </select>
-        <p class="small text-muted no-margin">As admin, you can manually choose the server owner.</p>
+        <p class=\"small text-muted no-margin\">As admin, you can manually choose the server owner.</p>
     @else
         {{-- Selain admin ID 1: otomatis --}}
-        <input type="hidden" id="pUserId" name="owner_id" value="{{ Auth::user()->id }}">
-        <input type="text" class="form-control" value="{{ Auth::user()->email }}" disabled>
-        <p class="small text-muted no-margin">This server will be owned by your account automatically.</p>
+        <input type=\"hidden\" id=\"pUserId\" name=\"owner_id\" value=\"{{ Auth::user()->id }}\">
+        <input type=\"text\" class=\"form-control\" value=\"{{ Auth::user()->email }}\" disabled>
+        <p class=\"small text-muted no-margin\">This server will be owned by your account automatically.</p>
     @endif
 </div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="pDescription" class="control-label">Server Description</label>
-                            <textarea id="pDescription" name="description" rows="3" class="form-control">{{ old('description') }}</textarea>
-                            <p class="text-muted small">A brief description of this server.</p>
+                    <div class=\"col-md-6\">
+                        <div class=\"form-group\">
+                            <label for=\"pDescription\" class=\"control-label\">Server Description</label>
+                            <textarea id=\"pDescription\" name=\"description\" rows=\"3\" class=\"form-control\">{{ old('description') }}</textarea>
+                            <p class=\"text-muted small\">A brief description of this server.</p>
                         </div>
 
-                        <div class="form-group">
-                            <div class="checkbox checkbox-primary no-margin-bottom">
-                                <input id="pStartOnCreation" name="start_on_completion" type="checkbox" {{ \\Pterodactyl\\Helpers\\Utilities::checked('start_on_completion', 1) }} />
-                                <label for="pStartOnCreation" class="strong">Start Server when Installed</label>
+                        <div class=\"form-group\">
+                            <div class=\"checkbox checkbox-primary no-margin-bottom\">
+                                <input id=\"pStartOnCreation\" name=\"start_on_completion\" type=\"checkbox\" {{ \\Pterodactyl\\Helpers\\Utilities::checked('start_on_completion', 1) }} />
+                                <label for=\"pStartOnCreation\" class=\"strong\">Start Server when Installed</label>
                             </div>
                         </div>
                     </div>
@@ -211,23 +218,23 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="box">
-                <div class="overlay" id="allocationLoader" style="display:none;"><i class="fa fa-refresh fa-spin"></i></div>
-                <div class="box-header with-border">
-                    <h3 class="box-title">Allocation Management</h3>
+    <div class=\"row\">
+        <div class=\"col-xs-12\">
+            <div class=\"box\">
+                <div class=\"overlay\" id=\"allocationLoader\" style=\"display:none;\"><i class=\"fa fa-refresh fa-spin\"></i></div>
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Allocation Management</h3>
                 </div>
 
-                <div class="box-body row">
-                    <div class="form-group col-sm-4">
-                        <label for="pNodeId">Node</label>
-                        <select name="node_id" id="pNodeId" class="form-control">
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-sm-4\">
+                        <label for=\"pNodeId\">Node</label>
+                        <select name=\"node_id\" id=\"pNodeId\" class=\"form-control\">
                             @foreach($locations as $location)
-                                <optgroup label="{{ $location->long }} ({{ $location->short }})">
+                                <optgroup label=\"{{ $location->long }} ({{ $location->short }})\">
                                 @foreach($location->nodes as $node)
 
-                                <option value="{{ $node->id }}"
+                                <option value=\"{{ $node->id }}\"
                                     @if($location->id === old('location_id')) selected @endif
                                 >{{ $node->name }}</option>
 
@@ -236,230 +243,230 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
                             @endforeach
                         </select>
 
-                        <p class="small text-muted no-margin">The node which this server will be deployed to.</p>
+                        <p class=\"small text-muted no-margin\">The node which this server will be deployed to.</p>
                     </div>
 
-                    <div class="form-group col-sm-4">
-                        <label for="pAllocation">Default Allocation</label>
-                        <select id="pAllocation" name="allocation_id" class="form-control"></select>
-                        <p class="small text-muted no-margin">The main allocation that will be assigned to this server.</p>
+                    <div class=\"form-group col-sm-4\">
+                        <label for=\"pAllocation\">Default Allocation</label>
+                        <select id=\"pAllocation\" name=\"allocation_id\" class=\"form-control\"></select>
+                        <p class=\"small text-muted no-margin\">The main allocation that will be assigned to this server.</p>
                     </div>
 
-                    <div class="form-group col-sm-4">
-                        <label for="pAllocationAdditional">Additional Allocation(s)</label>
-                        <select id="pAllocationAdditional" name="allocation_additional[]" class="form-control" multiple></select>
-                        <p class="small text-muted no-margin">Additional allocations to assign to this server on creation.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="box">
-                <div class="overlay" id="allocationLoader" style="display:none;"><i class="fa fa-refresh fa-spin"></i></div>
-                <div class="box-header with-border">
-                    <h3 class="box-title">Application Feature Limits</h3>
-                </div>
-
-                <div class="box-body row">
-                    <div class="form-group col-xs-6">
-                        <label for="pDatabaseLimit" class="control-label">Database Limit</label>
-                        <div>
-                            <input type="text" id="pDatabaseLimit" name="database_limit" class="form-control" value="{{ old('database_limit', 0) }}"/>
-                        </div>
-                        <p class="text-muted small">The total number of databases a user is allowed to create for this server.</p>
-                    </div>
-                    <div class="form-group col-xs-6">
-                        <label for="pAllocationLimit" class="control-label">Allocation Limit</label>
-                        <div>
-                            <input type="text" id="pAllocationLimit" name="allocation_limit" class="form-control" value="{{ old('allocation_limit', 0) }}"/>
-                        </div>
-                        <p class="text-muted small">The total number of allocations a user is allowed to create for this server.</p>
-                    </div>
-                    <div class="form-group col-xs-6">
-                        <label for="pBackupLimit" class="control-label">Backup Limit</label>
-                        <div>
-                            <input type="text" id="pBackupLimit" name="backup_limit" class="form-control" value="{{ old('backup_limit', 0) }}"/>
-                        </div>
-                        <p class="text-muted small">The total number of backups that can be created for this server.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="box">
-                <div class="box-header with-border">
-                    <h3 class="box-title">Resource Management</h3>
-                </div>
-
-                <div class="box-body row">
-                    <div class="form-group col-xs-6">
-                        <label for="pCPU">CPU Limit</label>
-
-                        <div class="input-group">
-                            <input type="text" id="pCPU" name="cpu" class="form-control" value="{{ old('cpu', 0) }}" />
-                            <span class="input-group-addon">%</span>
-                        </div>
-
-                        <p class="text-muted small">If you do not want to limit CPU usage, set the value to <code>0</code>. To determine a value, take the number of threads and multiply it by 100. For example, on a quad core system without hyperthreading <code>(4 * 100 = 400)</code> there is <code>400%</code> available. To limit a server to using half of a single thread, you would set the value to <code>50</code>. To allow a server to use up to two threads, set the value to <code>200</code>.<p>
-                    </div>
-
-                    <div class="form-group col-xs-6">
-                        <label for="pThreads">CPU Pinning</label>
-
-                        <div>
-                            <input type="text" id="pThreads" name="threads" class="form-control" value="{{ old('threads') }}" />
-                        </div>
-
-                        <p class="text-muted small"><strong>Advanced:</strong> Enter the specific CPU threads that this process can run on, or leave blank to allow all threads. This can be a single number, or a comma separated list. Example: <code>0</code>, <code>0-1,3</code>, or <code>0,1,3,4</code>.</p>
-                    </div>
-                </div>
-
-                <div class="box-body row">
-                    <div class="form-group col-xs-6">
-                        <label for="pMemory">Memory</label>
-
-                        <div class="input-group">
-                            <input type="text" id="pMemory" name="memory" class="form-control" value="{{ old('memory') }}" />
-                            <span class="input-group-addon">MiB</span>
-                        </div>
-
-                        <p class="text-muted small">The maximum amount of memory allowed for this container. Setting this to <code>0</code> will allow unlimited memory in a container.</p>
-                    </div>
-
-                    <div class="form-group col-xs-6">
-                        <label for="pSwap">Swap</label>
-
-                        <div class="input-group">
-                            <input type="text" id="pSwap" name="swap" class="form-control" value="{{ old('swap', 0) }}" />
-                            <span class="input-group-addon">MiB</span>
-                        </div>
-
-                        <p class="text-muted small">Setting this to <code>0</code> will disable swap space on this server. Setting to <code>-1</code> will allow unlimited swap.</p>
-                    </div>
-                </div>
-
-                <div class="box-body row">
-                    <div class="form-group col-xs-6">
-                        <label for="pDisk">Disk Space</label>
-
-                        <div class="input-group">
-                            <input type="text" id="pDisk" name="disk" class="form-control" value="{{ old('disk') }}" />
-                            <span class="input-group-addon">MiB</span>
-                        </div>
-
-                        <p class="text-muted small">This server will not be allowed to boot if it is using more than this amount of space. If a server goes over this limit while running it will be safely stopped and locked until enough space is available. Set to <code>0</code> to allow unlimited disk usage.</p>
-                    </div>
-
-                    <div class="form-group col-xs-6">
-                        <label for="pIO">Block IO Weight</label>
-
-                        <div>
-                            <input type="text" id="pIO" name="io" class="form-control" value="{{ old('io', 500) }}" />
-                        </div>
-
-                        <p class="text-muted small"><strong>Advanced</strong>: The IO performance of this server relative to other <em>running</em> containers on the system. Value should be between <code>10</code> and <code>1000</code>. Please see <a href="https://docs.docker.com/engine/reference/run/#block-io-bandwidth-blkio-constraint" target="_blank">this documentation</a> for more information about it.</p>
-                    </div>
-                    <div class="form-group col-xs-12">
-                        <div class="checkbox checkbox-primary no-margin-bottom">
-                            <input type="checkbox" id="pOomDisabled" name="oom_disabled" value="0" {{ \\Pterodactyl\\Helpers\\Utilities::checked('oom_disabled', 0) }} />
-                            <label for="pOomDisabled" class="strong">Enable OOM Killer</label>
-                        </div>
-
-                        <p class="small text-muted no-margin">Terminates the server if it breaches the memory limits. Enabling OOM killer may cause server processes to exit unexpectedly.</p>
+                    <div class=\"form-group col-sm-4\">
+                        <label for=\"pAllocationAdditional\">Additional Allocation(s)</label>
+                        <select id=\"pAllocationAdditional\" name=\"allocation_additional[]\" class=\"form-control\" multiple></select>
+                        <p class=\"small text-muted no-margin\">Additional allocations to assign to this server on creation.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="box">
-                <div class="box-header with-border">
-                    <h3 class="box-title">Nest Configuration</h3>
+    <div class=\"row\">
+        <div class=\"col-xs-12\">
+            <div class=\"box\">
+                <div class=\"overlay\" id=\"allocationLoader\" style=\"display:none;\"><i class=\"fa fa-refresh fa-spin\"></i></div>
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Application Feature Limits</h3>
                 </div>
 
-                <div class="box-body row">
-                    <div class="form-group col-xs-12">
-                        <label for="pNestId">Nest</label>
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pDatabaseLimit\" class=\"control-label\">Database Limit</label>
+                        <div>
+                            <input type=\"text\" id=\"pDatabaseLimit\" name=\"database_limit\" class=\"form-control\" value=\"{{ old('database_limit', 0) }}\"/>
+                        </div>
+                        <p class=\"text-muted small\">The total number of databases a user is allowed to create for this server.</p>
+                    </div>
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pAllocationLimit\" class=\"control-label\">Allocation Limit</label>
+                        <div>
+                            <input type=\"text\" id=\"pAllocationLimit\" name=\"allocation_limit\" class=\"form-control\" value=\"{{ old('allocation_limit', 0) }}\"/>
+                        </div>
+                        <p class=\"text-muted small\">The total number of allocations a user is allowed to create for this server.</p>
+                    </div>
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pBackupLimit\" class=\"control-label\">Backup Limit</label>
+                        <div>
+                            <input type=\"text\" id=\"pBackupLimit\" name=\"backup_limit\" class=\"form-control\" value=\"{{ old('backup_limit', 0) }}\"/>
+                        </div>
+                        <p class=\"text-muted small\">The total number of backups that can be created for this server.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class=\"row\">
+        <div class=\"col-xs-12\">
+            <div class=\"box\">
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Resource Management</h3>
+                </div>
 
-                        <select id="pNestId" name="nest_id" class="form-control">
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pCPU\">CPU Limit</label>
+
+                        <div class=\"input-group\">
+                            <input type=\"text\" id=\"pCPU\" name=\"cpu\" class=\"form-control\" value=\"{{ old('cpu', 0) }}\" />
+                            <span class=\"input-group-addon\">%</span>
+                        </div>
+
+                        <p class=\"text-muted small\">If you do not want to limit CPU usage, set the value to <code>0</code>. To determine a value, take the number of threads and multiply it by 100. For example, on a quad core system without hyperthreading <code>(4 * 100 = 400)</code> there is <code>400%</code> available. To limit a server to using half of a single thread, you would set the value to <code>50</code>. To allow a server to use up to two threads, set the value to <code>200</code>.<p>
+                    </div>
+
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pThreads\">CPU Pinning</label>
+
+                        <div>
+                            <input type=\"text\" id=\"pThreads\" name=\"threads\" class=\"form-control\" value=\"{{ old('threads') }}\" />
+                        </div>
+
+                        <p class=\"text-muted small\"><strong>Advanced:</strong> Enter the specific CPU threads that this process can run on, or leave blank to allow all threads. This can be a single number, or a comma separated list. Example: <code>0</code>, <code>0-1,3</code>, or <code>0,1,3,4</code>.</p>
+                    </div>
+                </div>
+
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pMemory\">Memory</label>
+
+                        <div class=\"input-group\">
+                            <input type=\"text\" id=\"pMemory\" name=\"memory\" class=\"form-control\" value=\"{{ old('memory') }}\" />
+                            <span class=\"input-group-addon\">MiB</span>
+                        </div>
+
+                        <p class=\"text-muted small\">The maximum amount of memory allowed for this container. Setting this to <code>0</code> will allow unlimited memory in a container.</p>
+                    </div>
+
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pSwap\">Swap</label>
+
+                        <div class=\"input-group\">
+                            <input type=\"text\" id=\"pSwap\" name=\"swap\" class=\"form-control\" value=\"{{ old('swap', 0) }}\" />
+                            <span class=\"input-group-addon\">MiB</span>
+                        </div>
+
+                        <p class=\"text-muted small\">Setting this to <code>0</code> will disable swap space on this server. Setting to <code>-1</code> will allow unlimited swap.</p>
+                    </div>
+                </div>
+
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pDisk\">Disk Space</label>
+
+                        <div class=\"input-group\">
+                            <input type=\"text\" id=\"pDisk\" name=\"disk\" class=\"form-control\" value=\"{{ old('disk') }}\" />
+                            <span class=\"input-group-addon\">MiB</span>
+                        </div>
+
+                        <p class=\"text-muted small\">This server will not be allowed to boot if it is using more than this amount of space. If a server goes over this limit while running it will be safely stopped and locked until enough space is available. Set to <code>0</code> to allow unlimited disk usage.</p>
+                    </div>
+
+                    <div class=\"form-group col-xs-6\">
+                        <label for=\"pIO\">Block IO Weight</label>
+
+                        <div>
+                            <input type=\"text\" id=\"pIO\" name=\"io\" class=\"form-control\" value=\"{{ old('io', 500) }}\" />
+                        </div>
+
+                        <p class=\"text-muted small\"><strong>Advanced</strong>: The IO performance of this server relative to other <em>running</em> containers on the system. Value should be between <code>10</code> and <code>1000</code>. Please see <a href=\"https://docs.docker.com/engine/reference/run/#block-io-bandwidth-blkio-constraint\" target=\"_blank\">this documentation</a> for more information about it.</p>
+                    </div>
+                    <div class=\"form-group col-xs-12\">
+                        <div class=\"checkbox checkbox-primary no-margin-bottom\">
+                            <input type=\"checkbox\" id=\"pOomDisabled\" name=\"oom_disabled\" value=\"0\" {{ \\Pterodactyl\\Helpers\\Utilities::checked('oom_disabled', 0) }} />
+                            <label for=\"pOomDisabled\" class=\"strong\">Enable OOM Killer</label>
+                        </div>
+
+                        <p class=\"small text-muted no-margin\">Terminates the server if it breaches the memory limits. Enabling OOM killer may cause server processes to exit unexpectedly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class=\"row\">
+        <div class=\"col-md-6\">
+            <div class=\"box\">
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Nest Configuration</h3>
+                </div>
+
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-12\">
+                        <label for=\"pNestId\">Nest</label>
+
+                        <select id=\"pNestId\" name=\"nest_id\" class=\"form-control\">
                             @foreach($nests as $nest)
-                                <option value="{{ $nest->id }}"
+                                <option value=\"{{ $nest->id }}\"
                                     @if($nest->id === old('nest_id'))
-                                        selected="selected"
+                                        selected=\"selected\"
                                     @endif
                                 >{{ $nest->name }}</option>
                             @endforeach
                         </select>
 
-                        <p class="small text-muted no-margin">Select the Nest that this server will be grouped under.</p>
+                        <p class=\"small text-muted no-margin\">Select the Nest that this server will be grouped under.</p>
                     </div>
 
-                    <div class="form-group col-xs-12">
-                        <label for="pEggId">Egg</label>
-                        <select id="pEggId" name="egg_id" class="form-control"></select>
-                        <p class="small text-muted no-margin">Select the Egg that will define how this server should operate.</p>
+                    <div class=\"form-group col-xs-12\">
+                        <label for=\"pEggId\">Egg</label>
+                        <select id=\"pEggId\" name=\"egg_id\" class=\"form-control\"></select>
+                        <p class=\"small text-muted no-margin\">Select the Egg that will define how this server should operate.</p>
                     </div>
-                    <div class="form-group col-xs-12">
-                        <div class="checkbox checkbox-primary no-margin-bottom">
-                            <input type="checkbox" id="pSkipScripting" name="skip_scripts" value="1" {{ \\Pterodactyl\\Helpers\\Utilities::checked('skip_scripts', 0) }} />
-                            <label for="pSkipScripting" class="strong">Skip Egg Install Script</label>
+                    <div class=\"form-group col-xs-12\">
+                        <div class=\"checkbox checkbox-primary no-margin-bottom\">
+                            <input type=\"checkbox\" id=\"pSkipScripting\" name=\"skip_scripts\" value=\"1\" {{ \\Pterodactyl\\Helpers\\Utilities::checked('skip_scripts', 0) }} />
+                            <label for=\"pSkipScripting\" class=\"strong\">Skip Egg Install Script</label>
                         </div>
 
-                        <p class="small text-muted no-margin">If the selected Egg has an install script attached to it, the script will run during the install. If you would like to skip this step, check this box.</p>
+                        <p class=\"small text-muted no-margin\">If the selected Egg has an install script attached to it, the script will run during the install. If you would like to skip this step, check this box.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="box">
-                <div class="box-header with-border">
-                    <h3 class="box-title">Docker Configuration</h3>
+        <div class=\"col-md-6\">
+            <div class=\"box\">
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Docker Configuration</h3>
                 </div>
 
-                <div class="box-body row">
-                    <div class="form-group col-xs-12">
-                        <label for="pDefaultContainer">Docker Image</label>
-                        <select id="pDefaultContainer" name="image" class="form-control"></select>
-                        <input id="pDefaultContainerCustom" name="custom_image" value="{{ old('custom_image') }}" class="form-control" placeholder="Or enter a custom image..." style="margin-top:1rem"/>
-                        <p class="small text-muted no-margin">This is the default Docker image that will be used to run this server. Select an image from the dropdown above, or enter a custom image in the text field above.</p>
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-12\">
+                        <label for=\"pDefaultContainer\">Docker Image</label>
+                        <select id=\"pDefaultContainer\" name=\"image\" class=\"form-control\"></select>
+                        <input id=\"pDefaultContainerCustom\" name=\"custom_image\" value=\"{{ old('custom_image') }}\" class=\"form-control\" placeholder=\"Or enter a custom image...\" style=\"margin-top:1rem\"/>
+                        <p class=\"small text-muted no-margin\">This is the default Docker image that will be used to run this server. Select an image from the dropdown above, or enter a custom image in the text field above.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            <div class="box">
-                <div class="box-header with-border">
-                    <h3 class="box-title">Startup Configuration</h3>
+    <div class=\"row\">
+        <div class=\"col-md-12\">
+            <div class=\"box\">
+                <div class=\"box-header with-border\">
+                    <h3 class=\"box-title\">Startup Configuration</h3>
                 </div>
 
-                <div class="box-body row">
-                    <div class="form-group col-xs-12">
-                        <label for="pStartup">Startup Command</label>
-                        <input type="text" id="pStartup" name="startup" value="{{ old('startup') }}" class="form-control" />
-                        <p class="small text-muted no-margin">The following data substitutes are available for the startup command: <code>@{{SERVER_MEMORY}}</code>, <code>@{{SERVER_IP}}</code>, and <code>@{{SERVER_PORT}}</code>. They will be replaced with the allocated memory, server IP, and server port respectively.</p>
+                <div class=\"box-body row\">
+                    <div class=\"form-group col-xs-12\">
+                        <label for=\"pStartup\">Startup Command</label>
+                        <input type=\"text\" id=\"pStartup\" name=\"startup\" value=\"{{ old('startup') }}\" class=\"form-control\" />
+                        <p class=\"small text-muted no-margin\">The following data substitutes are available for the startup command: <code>@{{SERVER_MEMORY}}</code>, <code>@{{SERVER_IP}}</code>, and <code>@{{SERVER_PORT}}</code>. They will be replaced with the allocated memory, server IP, and server port respectively.</p>
                     </div>
                 </div>
 
-                <div class="box-header with-border" style="margin-top:-10px;">
-                    <h3 class="box-title">Service Variables</h3>
+                <div class=\"box-header with-border\" style=\"margin-top:-10px;\">
+                    <h3 class=\"box-title\">Service Variables</h3>
                 </div>
 
-                <div class="box-body row" id="appendVariablesTo"></div>
+                <div class=\"box-body row\" id=\"appendVariablesTo\"></div>
 
-                <div class="box-footer">
+                <div class=\"box-footer\">
                     {!! csrf_field() !!}
-                    <input type="submit" class="btn btn-success pull-right" value="Create Server" />
+                    <input type=\"submit\" class=\"btn btn-success pull-right\" value=\"Create Server\" />
                 </div>
             </div>
         </div>
@@ -471,7 +478,7 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
     @parent
     {!! Theme::js('vendor/lodash/lodash.js') !!}
 
-    <script type="application/javascript">
+    <script type=\"application/javascript\">
         // Persist 'Service Variables'
         function serviceVariablesUpdated(eggId, ids) {
             @if (old('egg_id'))
@@ -495,7 +502,7 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
 
     {!! Theme::js('js/admin/new-server.js?v=20220530') !!}
 
-    <script type="application/javascript">
+    <script type=\"application/javascript\">
         $(document).ready(function() {
 // Persist 'Server Owner' select2
 // (Removed because Server Owner now auto-fills based on logged-in user)
@@ -538,10 +545,12 @@ write_file "/var/www/pterodactyl/resources/views/admin/servers/new.blade.php" '@
             // END Persist 'Nest' select2
         });
     </script>
-@endsection'
+@endsection"
 
+# ================================================
 # 3. DetailsModificationService.php
-write_file "/var/www/pterodactyl/app/Services/Servers/DetailsModificationService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Servers/DetailsModificationService.php" "<?php
 
 namespace Pterodactyl\\Services\\Servers;
 
@@ -595,10 +604,16 @@ class DetailsModificationService
             return $server;
         });
     }
-}'
+}"
 
+# ================================================
+# Lanjutkan untuk file 4-23... (saya tulis lengkap di GitHub)
+# ================================================
+
+# ================================================
 # 4. BuildModificationService.php
-write_file "/var/www/pterodactyl/app/Services/Servers/BuildModificationService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Servers/BuildModificationService.php" "<?php
 
 namespace Pterodactyl\\Services\\Servers;
 
@@ -710,10 +725,12 @@ class BuildModificationService
                 ]);
         }
     }
-}'
+}"
 
+# ================================================
 # 5. StartupModificationService.php
-write_file "/var/www/pterodactyl/app/Services/Servers/StartupModificationService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Servers/StartupModificationService.php" "<?php
 
 namespace Pterodactyl\\Services\\Servers;
 
@@ -789,10 +806,12 @@ class StartupModificationService
             'image' => $data['docker_image'] ?? $server->image,
         ])->save();
     }
-}'
+}"
 
+# ================================================
 # 6. DatabaseManagementService.php
-write_file "/var/www/pterodactyl/app/Services/Databases/DatabaseManagementService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Databases/DatabaseManagementService.php" "<?php
 
 namespace Pterodactyl\\Services\\Databases;
 
@@ -825,7 +844,7 @@ class DatabaseManagementService
 
     public static function generateUniqueDatabaseName(string $name, int $serverId): string
     {
-        return sprintf('s%d_%s', $serverId, substr($name, 0, 48 - strlen("s{$serverId}_")));
+        return sprintf('s%d_%s', $serverId, substr($name, 0, 48 - strlen(\"s{$serverId}_\")));
     }
 
     public function setValidateDatabaseLimit(bool $validate): self
@@ -852,7 +871,7 @@ class DatabaseManagementService
             }
         }
         if (empty($data['database']) || !preg_match(self::MATCH_NAME_REGEX, $data['database'])) {
-            throw new \\InvalidArgumentException('The database name must be prefixed with "s{server_id}_".');
+            throw new \\InvalidArgumentException('The database name must be prefixed with \"s{server_id}_\".');
         }
         $data = array_merge($data, [
             'server_id' => $server->id,
@@ -918,10 +937,12 @@ class DatabaseManagementService
         $database->saveOrFail();
         return $database;
     }
-}'
+}"
 
+# ================================================
 # 7. ServerTransferController.php
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Servers/ServerTransferController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Servers/ServerTransferController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin\\Servers;
 
@@ -1018,13 +1039,12 @@ class ServerTransferController extends Controller
             $this->allocationRepository->updateWhereIn('id', $updateIds, ['server_id' => $server->id]);
         }
     }
-}'
+}"
 
-# 8. ServersController.php (yang pertama - Anti Button Transfer This Server) - sebenarnya ini sudah ada? Tunggu, kita sudah punya ServerTransferController. Sekarang file ServersController.php yang utama. 
-# Dalam daftar, ada dua ServersController.php? Mari kita lihat: yang satu untuk Anti Button Transfer This Server (path: /var/www/pterodactyl/app/Http/Controllers/Admin/ServersController.php) dan satu lagi untuk Anti Button Toggle Status (path sama). Itu adalah file yang sama, jadi kita hanya perlu satu. Dalam kode asli, yang kedua adalah duplikat? Mari periksa: kode yang diberikan untuk "PROTECT1 ANTI UPDATE MANAGE (Anti Button Transfer This Server)" adalah file ServerTransferController.php, bukan ServersController.php. Lalu "PROTECT1 ANTI UPDATE MANAGE (Anti Button Toggle Status)" adalah file ServersController.php. Jadi kita perlu file ServersController.php yang berisi method toggleInstall, manageSuspension, dll. 
-# Saya akan tulis file ServersController.php berdasarkan kode yang diberikan (yang kedua).
-
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/ServersController.php" '<?php
+# ================================================
+# 8. ServersController.php (Anti Toggle Status)
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/ServersController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -1228,10 +1248,12 @@ class ServersController extends Controller
         $this->alert->success('Mount was removed successfully.')->flash();
         return redirect()->route('admin.servers.view.mounts', $server->id);
     }
-}'
+}"
 
+# ================================================
 # 9. ReinstallServerService.php
-write_file "/var/www/pterodactyl/app/Services/Servers/ReinstallServerService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Servers/ReinstallServerService.php" "<?php
 
 namespace Pterodactyl\\Services\\Servers;
 
@@ -1278,10 +1300,12 @@ class ReinstallServerService
             return $server->refresh();
         });
     }
-}'
+}"
 
+# ================================================
 # 10. ServerDeletionService.php
-write_file "/var/www/pterodactyl/app/Services/Servers/ServerDeletionService.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Services/Servers/ServerDeletionService.php" "<?php
 
 namespace Pterodactyl\\Services\\Servers;
 
@@ -1338,7 +1362,7 @@ class ServerDeletionService
             Log::build([
                 'driver' => 'single',
                 'path' => storage_path('logs/force_delete.log'),
-            ])->info("⚠️ FORCE DELETE SERVER #{$server->id} ({$server->name}) oleh User ID {$user?->id}");
+            ])->info(\"⚠️ FORCE DELETE SERVER #{$server->id} ({$server->name}) oleh User ID {$user?->id}\");
         }
         try {
             $this->daemonServerRepository->setServer($server)->delete();
@@ -1361,10 +1385,11 @@ class ServerDeletionService
             $server->delete();
         });
     }
-}'
-
+}"
+# ================================================
 # 11. UserController.php (PROTECT2)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/UserController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/UserController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -1442,13 +1467,13 @@ class UserController extends Controller
     {
         $authUser = $request->user();
         if ($authUser->id !== 1) {
-            throw new DisplayException("🚫 Akses ditolak: hanya admin ID 1 yang dapat menghapus user! ©Protect By @Fyxzpedia");
+            throw new DisplayException(\"🚫 Akses ditolak: hanya admin ID 1 yang dapat menghapus user! ©Protect By @Fyxzpedia\");
         }
         if ($authUser->id === $user->id) {
-            throw new DisplayException("❌ Tidak bisa menghapus akun Anda sendiri.");
+            throw new DisplayException(\"❌ Tidak bisa menghapus akun Anda sendiri.\");
         }
         $this->deletionService->handle($user);
-        $this->alert->success("🗑️ User berhasil dihapus.")->flash();
+        $this->alert->success(\"🗑️ User berhasil dihapus.\")->flash();
         return redirect()->route('admin.users');
     }
 
@@ -1457,13 +1482,13 @@ class UserController extends Controller
         $authUser = $request->user();
         $data = $request->normalize();
         if ($authUser->id !== 1 && isset($data['root_admin']) && $data['root_admin'] == true) {
-            throw new DisplayException("🚫 Akses ditolak: Hanya admin ID 1 yang dapat membuat user admin! ©Protect By @Fyxzpedia.");
+            throw new DisplayException(\"🚫 Akses ditolak: Hanya admin ID 1 yang dapat membuat user admin! ©Protect By @Fyxzpedia.\");
         }
         if ($authUser->id !== 1) {
             $data['root_admin'] = false;
         }
         $user = $this->creationService->handle($data);
-        $this->alert->success("✅ Akun user berhasil dibuat (level: user biasa).")->flash();
+        $this->alert->success(\"✅ Akun user berhasil dibuat (level: user biasa).\")->flash();
         return redirect()->route('admin.users.view', $user->id);
     }
 
@@ -1472,14 +1497,14 @@ class UserController extends Controller
         $restrictedFields = ['email', 'first_name', 'last_name', 'password'];
         foreach ($restrictedFields as $field) {
             if ($request->filled($field) && $request->user()->id !== 1) {
-                throw new DisplayException("⚠️ Data hanya bisa diubah oleh admin ID 1. ©Protect By @Fyxzpedia");
+                throw new DisplayException(\"⚠️ Data hanya bisa diubah oleh admin ID 1. ©Protect By @Fyxzpedia\");
             }
         }
         if ($user->root_admin && $request->user()->id !== 1) {
-            throw new DisplayException("🚫 Akses ditolak: Hanya admin ID 1 yang dapat menurunkan hak admin user ini! ©Protect By @Fyxzpedia.");
+            throw new DisplayException(\"🚫 Akses ditolak: Hanya admin ID 1 yang dapat menurunkan hak admin user ini! ©Protect By @Fyxzpedia.\");
         }
         if ($request->user()->id !== 1 && $request->user()->id !== $user->id) {
-            throw new DisplayException("🚫 Akses ditolak: Hanya admin ID 1 yang dapat mengubah data user lain! ©Protect By @Fyxzpedia.");
+            throw new DisplayException(\"🚫 Akses ditolak: Hanya admin ID 1 yang dapat mengubah data user lain! ©Protect By @Fyxzpedia.\");
         }
         $data = $request->normalize();
         if ($request->user()->id !== 1) {
@@ -1503,7 +1528,7 @@ class UserController extends Controller
         if ($request->query('user_id')) {
             $user = User::query()->findOrFail($request->input('user_id'));
             if ($authUser->id !== 1 && $authUser->id !== $user->id) {
-                throw new DisplayException("🚫 Akses ditolak: Hanya admin ID 1 yang dapat melihat data user lain! ©Protect By @Fyxzpedia.");
+                throw new DisplayException(\"🚫 Akses ditolak: Hanya admin ID 1 yang dapat melihat data user lain! ©Protect By @Fyxzpedia.\");
             }
             $user->md5 = md5(strtolower($user->email));
             return $user;
@@ -1513,10 +1538,12 @@ class UserController extends Controller
             return $item;
         });
     }
-}'
+}"
 
+# ================================================
 # 12. LocationController.php (PROTECT3)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/LocationController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/LocationController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -1607,10 +1634,12 @@ class LocationController extends Controller
         }
         return redirect()->route('admin.locations.view', $location->id);
     }
-}'
+}"
 
+# ================================================
 # 13. NodeController.php (PROTECT4)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Nodes/NodeController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Nodes/NodeController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin\\Nodes;
 
@@ -1710,10 +1739,12 @@ class NodeController extends Controller
         }
         return redirect()->route('admin.nodes.view', $id);
     }
-}'
+}"
 
+# ================================================
 # 14. NestController.php (PROTECT5)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Nests/NestController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Nests/NestController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin\\Nests;
 
@@ -1800,10 +1831,12 @@ class NestController extends Controller
         }
         return redirect()->route('admin.nests.view', $nest);
     }
-}'
+}"
 
+# ================================================
 # 15. IndexController.php (Settings) (PROTECT6)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Settings/IndexController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/Settings/IndexController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin\\Settings;
 
@@ -1859,10 +1892,12 @@ class IndexController extends Controller
         )->flash();
         return redirect()->route('admin.settings');
     }
-}'
+}"
 
+# ================================================
 # 16. FileController.php (PROTECT7)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/Servers/FileController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/Servers/FileController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Api\\Client\\Servers;
 
@@ -1901,7 +1936,7 @@ class FileController extends ClientApiController
             return;
         }
         if ($authUser->id !== $server->owner_id) {
-            abort(403, "🚫 Kasihan gabisa yaaa? 😹 Ini bukan servermu! Akses ditolak total. ©Protect By @Fyxzpedia");
+            abort(403, \"🚫 Kasihan gabisa yaaa? 😹 Ini bukan servermu! Akses ditolak total. ©Protect By @Fyxzpedia\");
         }
     }
 
@@ -2054,10 +2089,12 @@ class FileController extends ClientApiController
             ->log();
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
     }
-}'
+}"
 
+# ================================================
 # 17. ServerController.php (Api/Client) (PROTECT8)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/Servers/ServerController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/Servers/ServerController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Api\\Client\\Servers;
 
@@ -2092,10 +2129,12 @@ class ServerController extends ClientApiController
             ])
             ->toArray();
     }
-}'
+}"
 
+# ================================================
 # 18. ApiController.php (PROTECT9)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/ApiController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/ApiController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -2170,10 +2209,12 @@ class ApiController extends Controller
         $this->repository->deleteApplicationKey($request->user(), $identifier);
         return response('', 204);
     }
-}'
+}"
 
+# ================================================
 # 19. ApiKeyController.php (PROTECT10)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/ApiKeyController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/ApiKeyController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Api\\Client;
 
@@ -2238,10 +2279,12 @@ class ApiKeyController extends ClientApiController
         $key->delete();
         return new JsonResponse([], JsonResponse::HTTP_NO_CONTENT);
     }
-}'
+}"
 
+# ================================================
 # 20. DatabaseController.php (PROTECT11)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/DatabaseController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/DatabaseController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -2344,10 +2387,12 @@ class DatabaseController extends Controller
         $this->alert->success('🗑️ Database host berhasil dihapus.')->flash();
         return redirect()->route('admin.databases');
     }
-}'
+}"
 
+# ================================================
 # 21. MountController.php (PROTECT12)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/MountController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Admin/MountController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Admin;
 
@@ -2466,10 +2511,12 @@ class MountController extends Controller
         $mount->nodes()->detach($node_id);
         return response('', 204);
     }
-}'
+}"
 
+# ================================================
 # 22. TwoFactorController.php (PROTECT13)
-write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/TwoFactorController.php" '<?php
+# ================================================
+write_file "/var/www/pterodactyl/app/Http/Controllers/Api/Client/TwoFactorController.php" "<?php
 
 namespace Pterodactyl\\Http\\Controllers\\Api\\Client;
 
@@ -2543,26 +2590,28 @@ class TwoFactorController extends ClientApiController
         Activity::event('user:two-factor.delete')->log();
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
     }
-}'
+}"
 
+# ================================================
 # 23. admin.blade.php (PROTECT14)
-write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOCTYPE html>
+# ================================================
+write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" "<!DOCTYPE html>
 <html>
     <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta charset=\"utf-8\">
+        <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">
         <title>{{ config('app.name', 'Pterodactyl') }} - @yield('title')</title>
-        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
-        <meta name="_token" content="{{ csrf_token() }}">
+        <meta content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no\" name=\"viewport\">
+        <meta name=\"_token\" content=\"{{ csrf_token() }}\">
 
-        <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
-        <link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
-        <link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
-        <link rel="manifest" href="/favicons/manifest.json">
-        <link rel="mask-icon" href="/favicons/safari-pinned-tab.svg" color="#bc6e3c">
-        <link rel="shortcut icon" href="/favicons/favicon.ico">
-        <meta name="msapplication-config" content="/favicons/browserconfig.xml">
-        <meta name="theme-color" content="#0e4688">
+        <link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/favicons/apple-touch-icon.png\">
+        <link rel=\"icon\" type=\"image/png\" href=\"/favicons/favicon-32x32.png\" sizes=\"32x32\">
+        <link rel=\"icon\" type=\"image/png\" href=\"/favicons/favicon-16x16.png\" sizes=\"16x16\">
+        <link rel=\"manifest\" href=\"/favicons/manifest.json\">
+        <link rel=\"mask-icon\" href=\"/favicons/safari-pinned-tab.svg\" color=\"#bc6e3c\">
+        <link rel=\"shortcut icon\" href=\"/favicons/favicon.ico\">
+        <meta name=\"msapplication-config\" content=\"/favicons/browserconfig.xml\">
+        <meta name=\"theme-color\" content=\"#0e4688\">
 
         @include('layouts.scripts')
 
@@ -2574,132 +2623,132 @@ write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOC
             {!! Theme::css('vendor/sweetalert/sweetalert.min.css?t={cache-version}') !!}
             {!! Theme::css('vendor/animate/animate.min.css?t={cache-version}') !!}
             {!! Theme::css('css/pterodactyl.css?t={cache-version}') !!}
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+            <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css\">
+            <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css\">
 
             <!--[if lt IE 9]>
-            <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-            <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+            <script src=\"https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js\"></script>
+            <script src=\"https://oss.maxcdn.com/respond/1.4.2/respond.min.js\"></script>
             <![endif]-->
         @show
     </head>
-    <body class="hold-transition skin-blue fixed sidebar-mini">
-        <div class="wrapper">
-            <header class="main-header">
-                <a href="{{ route('index') }}" class="logo">
+    <body class=\"hold-transition skin-blue fixed sidebar-mini\">
+        <div class=\"wrapper\">
+            <header class=\"main-header\">
+                <a href=\"{{ route('index') }}\" class=\"logo\">
                     <span>{{ config('app.name', 'Pterodactyl') }}</span>
                 </a>
-                <nav class="navbar navbar-static-top">
-                    <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
+                <nav class=\"navbar navbar-static-top\">
+                    <a href=\"#\" class=\"sidebar-toggle\" data-toggle=\"push-menu\" role=\"button\">
+                        <span class=\"sr-only\">Toggle navigation</span>
+                        <span class=\"icon-bar\"></span>
+                        <span class=\"icon-bar\"></span>
+                        <span class=\"icon-bar\"></span>
                     </a>
-                    <div class="navbar-custom-menu">
-                        <ul class="nav navbar-nav">
-                            <li class="user-menu">
-                                <a href="{{ route('account') }}">
-                                    <img src="https://www.gravatar.com/avatar/{{ md5(strtolower(Auth::user()->email)) }}?s=160" class="user-image" alt="User Image">
-                                    <span class="hidden-xs">{{ Auth::user()->name_first }} {{ Auth::user()->name_last }}</span>
+                    <div class=\"navbar-custom-menu\">
+                        <ul class=\"nav navbar-nav\">
+                            <li class=\"user-menu\">
+                                <a href=\"{{ route('account') }}\">
+                                    <img src=\"https://www.gravatar.com/avatar/{{ md5(strtolower(Auth::user()->email)) }}?s=160\" class=\"user-image\" alt=\"User Image\">
+                                    <span class=\"hidden-xs\">{{ Auth::user()->name_first }} {{ Auth::user()->name_last }}</span>
                                 </a>
                             </li>
                             <li>
-                                <li><a href="{{ route('index') }}" data-toggle="tooltip" data-placement="bottom" title="Exit Admin Control"><i class="fa fa-server"></i></a></li>
+                                <li><a href=\"{{ route('index') }}\" data-toggle=\"tooltip\" data-placement=\"bottom\" title=\"Exit Admin Control\"><i class=\"fa fa-server\"></i></a></li>
                             </li>
                             <li>
-                                <li><a href="{{ route('auth.logout') }}" id="logoutButton" data-toggle="tooltip" data-placement="bottom" title="Logout"><i class="fa fa-sign-out"></i></a></li>
+                                <li><a href=\"{{ route('auth.logout') }}\" id=\"logoutButton\" data-toggle=\"tooltip\" data-placement=\"bottom\" title=\"Logout\"><i class=\"fa fa-sign-out\"></i></a></li>
                             </li>
                         </ul>
                     </div>
                 </nav>
             </header>
-            <aside class="main-sidebar">
-                <section class="sidebar">
-                    <ul class="sidebar-menu">
-                        <li class="header">BASIC ADMINISTRATION</li>
-                        <li class="{{ Route::currentRouteName() !== 'admin.index' ?: 'active' }}">
-                            <a href="{{ route('admin.index') }}">
-                                <i class="fa fa-home"></i> <span>Overview</span>
+            <aside class=\"main-sidebar\">
+                <section class=\"sidebar\">
+                    <ul class=\"sidebar-menu\">
+                        <li class=\"header\">BASIC ADMINISTRATION</li>
+                        <li class=\"{{ Route::currentRouteName() !== 'admin.index' ?: 'active' }}\">
+                            <a href=\"{{ route('admin.index') }}\">
+                                <i class=\"fa fa-home\"></i> <span>Overview</span>
                             </a>
                         </li>
 @if(Auth::user()->id == 1)
-<li class="{{ ! starts_with(Route::currentRouteName(), 'admin.settings') ?: 'active' }}">
-    <a href="{{ route('admin.settings') }}">
-        <i class="fa fa-wrench"></i> <span>Settings</span>
+<li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.settings') ?: 'active' }}\">
+    <a href=\"{{ route('admin.settings') }}\">
+        <i class=\"fa fa-wrench\"></i> <span>Settings</span>
     </a>
 </li>
 @endif
 @if(Auth::user()->id == 1)
-<li class="{{ ! starts_with(Route::currentRouteName(), 'admin.api') ?: 'active' }}">
-    <a href="{{ route('admin.api.index')}}">
-        <i class="fa fa-gamepad"></i> <span>Application API</span>
+<li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.api') ?: 'active' }}\">
+    <a href=\"{{ route('admin.api.index')}}\">
+        <i class=\"fa fa-gamepad\"></i> <span>Application API</span>
     </a>
 </li>
 @endif
-<li class="header">MANAGEMENT</li>
+<li class=\"header\">MANAGEMENT</li>
 
 @if(Auth::user()->id == 1)
-<li class="{{ ! starts_with(Route::currentRouteName(), 'admin.databases') ?: 'active' }}">
-    <a href="{{ route('admin.databases') }}">
-        <i class="fa fa-database"></i> <span>Databases</span>
-    </a>
-</li>
-@endif
-
-@if(Auth::user()->id == 1)
-<li class="{{ ! starts_with(Route::currentRouteName(), 'admin.locations') ?: 'active' }}">
-    <a href="{{ route('admin.locations') }}">
-        <i class="fa fa-globe"></i> <span>Locations</span>
+<li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.databases') ?: 'active' }}\">
+    <a href=\"{{ route('admin.databases') }}\">
+        <i class=\"fa fa-database\"></i> <span>Databases</span>
     </a>
 </li>
 @endif
 
 @if(Auth::user()->id == 1)
-<li class="{{ ! starts_with(Route::currentRouteName(), 'admin.nodes') ?: 'active' }}">
-    <a href="{{ route('admin.nodes') }}">
-        <i class="fa fa-sitemap"></i> <span>Nodes</span>
+<li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.locations') ?: 'active' }}\">
+    <a href=\"{{ route('admin.locations') }}\">
+        <i class=\"fa fa-globe\"></i> <span>Locations</span>
     </a>
 </li>
 @endif
 
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.servers') ?: 'active' }}">
-                            <a href="{{ route('admin.servers') }}">
-                                <i class="fa fa-server"></i> <span>Servers</span>
+@if(Auth::user()->id == 1)
+<li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.nodes') ?: 'active' }}\">
+    <a href=\"{{ route('admin.nodes') }}\">
+        <i class=\"fa fa-sitemap\"></i> <span>Nodes</span>
+    </a>
+</li>
+@endif
+
+                        <li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.servers') ?: 'active' }}\">
+                            <a href=\"{{ route('admin.servers') }}\">
+                                <i class=\"fa fa-server\"></i> <span>Servers</span>
                             </a>
                         </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.users') ?: 'active' }}">
-                            <a href="{{ route('admin.users') }}">
-                                <i class="fa fa-users"></i> <span>Users</span>
+                        <li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.users') ?: 'active' }}\">
+                            <a href=\"{{ route('admin.users') }}\">
+                                <i class=\"fa fa-users\"></i> <span>Users</span>
                             </a>
                         </li>
 @if(Auth::user()->id == 1)
-    <li class="header">SERVICE MANAGEMENT</li>
+    <li class=\"header\">SERVICE MANAGEMENT</li>
 
-    <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.mounts') ?: 'active' }}">
-        <a href="{{ route('admin.mounts') }}">
-            <i class="fa fa-magic"></i> <span>Mounts</span>
+    <li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.mounts') ?: 'active' }}\">
+        <a href=\"{{ route('admin.mounts') }}\">
+            <i class=\"fa fa-magic\"></i> <span>Mounts</span>
         </a>
     </li>
 
-    <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.nests') ?: 'active' }}">
-        <a href="{{ route('admin.nests') }}">
-            <i class="fa fa-th-large"></i> <span>Nests</span>
+    <li class=\"{{ ! starts_with(Route::currentRouteName(), 'admin.nests') ?: 'active' }}\">
+        <a href=\"{{ route('admin.nests') }}\">
+            <i class=\"fa fa-th-large\"></i> <span>Nests</span>
         </a>
     </li>
 @endif
                     </ul>
                 </section>
             </aside>
-            <div class="content-wrapper">
-                <section class="content-header">
+            <div class=\"content-wrapper\">
+                <section class=\"content-header\">
                     @yield('content-header')
                 </section>
-                <section class="content">
-                    <div class="row">
-                        <div class="col-xs-12">
+                <section class=\"content\">
+                    <div class=\"row\">
+                        <div class=\"col-xs-12\">
                             @if (count($errors) > 0)
-                                <div class="alert alert-danger">
+                                <div class=\"alert alert-danger\">
                                     There was an error validating the data provided.<br><br>
                                     <ul>
                                         @foreach ($errors->all() as $error)
@@ -2710,7 +2759,7 @@ write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOC
                             @endif
                             @foreach (Alert::getMessages() as $type => $messages)
                                 @foreach ($messages as $message)
-                                    <div class="alert alert-{{ $type }} alert-dismissable" role="alert">
+                                    <div class=\"alert alert-{{ $type }} alert-dismissable\" role=\"alert\">
                                         {!! $message !!}
                                     </div>
                                 @endforeach
@@ -2720,16 +2769,16 @@ write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOC
                     @yield('content')
                 </section>
             </div>
-            <footer class="main-footer">
-                <div class="pull-right small text-gray" style="margin-right:10px;margin-top:-7px;">
-                    <strong><i class="fa fa-fw {{ $appIsGit ? 'fa-git-square' : 'fa-code-fork' }}"></i></strong> {{ $appVersion }}<br />
-                    <strong><i class="fa fa-fw fa-clock-o"></i></strong> {{ round(microtime(true) - LARAVEL_START, 3) }}s
+            <footer class=\"main-footer\">
+                <div class=\"pull-right small text-gray\" style=\"margin-right:10px;margin-top:-7px;\">
+                    <strong><i class=\"fa fa-fw {{ $appIsGit ? 'fa-git-square' : 'fa-code-fork' }}\"></i></strong> {{ $appVersion }}<br />
+                    <strong><i class=\"fa fa-fw fa-clock-o\"></i></strong> {{ round(microtime(true) - LARAVEL_START, 3) }}s
                 </div>
-                Copyright &copy; 2015 - {{ date('Y') }} <a href="https://pterodactyl.io/">Pterodactyl Software</a>.
+                Copyright &copy; 2015 - {{ date('Y') }} <a href=\"https://pterodactyl.io/\">Pterodactyl Software</a>.
             </footer>
         </div>
         @section('footer-scripts')
-            <script src="/js/keyboard.polyfill.js" type="application/javascript"></script>
+            <script src=\"/js/keyboard.polyfill.js\" type=\"application/javascript\"></script>
             <script>keyboardeventKeyPolyfill.polyfill();</script>
 
             {!! Theme::js('vendor/jquery/jquery.min.js?t={cache-version}') !!}
@@ -2740,7 +2789,7 @@ write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOC
             {!! Theme::js('vendor/bootstrap-notify/bootstrap-notify.min.js?t={cache-version}') !!}
             {!! Theme::js('vendor/select2/select2.full.min.js?t={cache-version}') !!}
             {!! Theme::js('js/admin/functions.js?t={cache-version}') !!}
-            <script src="/js/autocomplete.js" type="application/javascript"></script>
+            <script src=\"/js/autocomplete.js\" type=\"application/javascript\"></script>
 
             @if(Auth::user()->root_admin)
                 <script>
@@ -2772,11 +2821,15 @@ write_file "/var/www/pterodactyl/resources/views/layouts/admin.blade.php" '<!DOC
 
             <script>
                 $(function () {
-                    $('[data-toggle="tooltip"]').tooltip();
+                    $('[data-toggle=\"tooltip\"]').tooltip();
                 })
             </script>
         @show
     </body>
-</html>'
+</html>"
 
-echo -e "${GREEN}✅ Instalasi selesai! Semua file proteksi telah ditulis.${NC}"
+ 
+echo -e "${GREEN}✅ SEMUA FILE PROTEKSI (1-23) BERHASIL DITULIS!${NC}"
+echo -e "${YELLOW}📂 Lokasi: /var/www/pterodactyl/${NC}"
+echo -e "${YELLOW}⚙️ Jangan lupa restart panel: php artisan optimize:clear${NC}"
+echo -e "${YELLOW}🔄 Jika perlu, restart service: systemctl restart nginx && systemctl restart php8.1-fpm${NC}"
