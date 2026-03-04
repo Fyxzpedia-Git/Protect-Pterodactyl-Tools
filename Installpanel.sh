@@ -2,83 +2,89 @@
 
 clear
 echo "========================================"
-echo "     AUTO INSTALL PTERODACTYL PANEL"
+echo "      AUTO INSTALL PTERODACTYL"
 echo "========================================"
-echo ""
 
-read -p "Masukkan Domain Panel (contoh: panel.domain.com): " PANEL_DOMAIN
-read -p "Masukkan Domain Node (contoh: node.domain.com): " NODE_DOMAIN
-read -p "Masukkan Password Admin: " ADMIN_PASS
+read -p "Masukkan Domain Panel: " DOMAIN
+read -p "Masukkan Email SSL: " EMAIL
+read -p "Masukkan Password Admin: " PASSWORD
+
+SERVER_IP=$(curl -s ifconfig.me)
+DOMAIN_IP=$(getent hosts $DOMAIN | awk '{ print $1 }')
+
+echo ""
+echo "Checking domain DNS..."
+
+if [ "$DOMAIN_IP" != "$SERVER_IP" ]; then
+    echo "❌ ERROR: Domain tidak mengarah ke IP VPS"
+    echo "Domain IP: $DOMAIN_IP"
+    echo "Server IP: $SERVER_IP"
+    exit 1
+fi
+
+echo "✅ DNS OK"
 
 echo ""
 echo "Updating system..."
 apt update -y && apt upgrade -y
 
-echo ""
 echo "Installing dependencies..."
 apt install -y curl wget git unzip tar nginx mariadb-server redis-server \
-php8.3 php8.3-cli php8.3-fpm php8.3-mysql php8.3-gd php8.3-mbstring \
-php8.3-bcmath php8.3-xml php8.3-curl php8.3-zip
+certbot python3-certbot-nginx
 
-# =========================
-# INSTALL PANEL
-# =========================
+systemctl enable nginx
+systemctl start nginx
 
 echo ""
 echo "Installing Panel..."
-
 bash <(curl -s https://pterodactyl-installer.se) <<EOF
 0
 
 
 1248
 Asia/Jakarta
-admin@gmail.com
-admin@gmail.com
+$EMAIL
+$EMAIL
 admin
 admin
 admin
-$ADMIN_PASS
-$PANEL_DOMAIN
-y
-y
-y
-y
-y
+$PASSWORD
+$DOMAIN
+n
+n
+n
+n
+n
 
 1
-Y
 EOF
-
-# =========================
-# INSTALL WINGS
-# =========================
 
 echo ""
-echo "Installing Wings..."
+echo "Restarting Nginx..."
+systemctl restart nginx
 
-bash <(curl -s https://pterodactyl-installer.se) <<EOF
-1
-y
-y
-y
-$PANEL_DOMAIN
-y
-user
-1248
-y
-$NODE_DOMAIN
-y
-admin@gmail.com
-y
-EOF
+echo ""
+echo "Requesting SSL Certificate..."
+
+certbot --nginx \
+-d $DOMAIN \
+--non-interactive \
+--agree-tos \
+--no-eff-email \
+-m $EMAIL \
+--redirect
+
+if [ $? -ne 0 ]; then
+    echo "❌ SSL Gagal. Cek DNS / Port 80"
+    exit 1
+fi
 
 echo ""
 echo "========================================"
 echo "      INSTALLATION COMPLETE ✅"
 echo "========================================"
 echo ""
-echo "Panel: https://$PANEL_DOMAIN"
-echo "Node : https://$NODE_DOMAIN"
-echo "Email: admin@gmail.com"
-echo "Password: $ADMIN_PASS"
+echo "Panel URL: https://$DOMAIN"
+echo "Login:"
+echo "Email: $EMAIL"
+echo "Password: $PASSWORD"
